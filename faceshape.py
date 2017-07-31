@@ -4,9 +4,9 @@ import cv2
 import dlib
 from sklearn.cluster import KMeans
 
-imagepath = "D:\workspace\FaceShape\i3.jpg"
+imagepath = "D:\workspace\FaceShape\i1.jpg"
 # link = https://github.com/opencv/opencv/tree/master/data/haarcascades
-cascade_path = "D:\workspace\FaceShape\haarcascade_frontalface_alt_tree.xml"
+cascade_path = "D:\workspace\FaceShape\haarcascade_frontalface_default.xml"
 # download file path = http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 predictor_path = "D:\workspace\FaceShape\shape_predictor_68_face_landmarks.dat"
 
@@ -18,6 +18,7 @@ predictor = dlib.shape_predictor(predictor_path)
 
 #read the image
 image = cv2.imread(imagepath)
+
 #for auto canny detection
 v = np.median(image)
 #resizing the image to 100 cols nd 50 rows
@@ -46,33 +47,30 @@ for (x,y,w,h) in faces:
     cv2.rectangle(image,(x,y), (x+w,y+int(0.25*h)), (0,255,100), 2 )
     #getting area of interest from image i.e., forehead
     forehead = image[y:y+int(0.25*h), x:x+w]
+
     cv2.imshow("forehead",forehead)
     rows,cols, bands = forehead.shape
+    print('rows=',rows,'cols=',cols,'bands=',bands)
     X = forehead.reshape(rows*cols,bands)
-    kmeans = KMeans(n_clusters=2, random_state=0).fit(X)
-    labels = kmeans.labels_.reshape(rows,cols)
-    sigma =0.33
-    b,g,r = kmeans.cluster_centers_[1]
-    cluster1=np.array([r,g,b],dtype="uint8")
-    lower = cluster1+30
-    upper = cluster1
-    lower = np.array(lower, dtype = "uint8")
-    upper = np.array(upper, dtype = "uint8")
-    mask = cv2.inRange(forehead,lower,upper)
-    output=cv2.bitwise_and(forehead,forehead,mask=mask)
-    cv2.imshow("clus",output)
-    for i in np.unique(labels):
-        color = kmeans.cluster_centers_[i]
-        print("i=",i,"xolor=",color)
+    #kmeans.
+    kmeans = KMeans(n_clusters=2,init='k-means++',max_iter=300,n_init=10, random_state=0)
+    y_kmeans = kmeans.fit_predict(X)
+    for i in range(0,rows):
+        for j in range(0,cols):
+            if y_kmeans[i*cols+j]==True:
+                forehead[i][j]=[255,255,255]
+            if y_kmeans[i*cols+j]==False:
+                forehead[i][j]=[0,0,0]
+                cv2.imshow('after',forehead)        
     #applying canny edge detection 
     #for more http://www.pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
-    #sigma = 0.33 #suggested value
+    sigma = 0.33 #suggested value
     #compute the median of the single channel pixel intensities
     #v = np.median(image)
     #applying automatic canny edge detection using the computed median 
     lower = int(max(0,(1.0-sigma)*v))
-    upper = int(max(255,(1.0+sigma)*v))
-    edged = cv2.Canny(forehead,1,250)
+    upper = int(min(255,(1.0+sigma)*v))
+    edged = cv2.Canny(forehead,lower,upper)
     cv2.imshow("auto canny detection", edged)
     #draw a rectangle around the faces
     cv2.rectangle(image, (x,y), (x+w,y+h), (0,255,0), 2)
