@@ -1,13 +1,16 @@
 #importing the libraries
-import numpy as np
-import cv2
-import dlib
-from sklearn.cluster import KMeans
+import numpy as np #for mathematical calculations
+import cv2 #for face detection and other image operations
+import dlib #for detection of facial landmarks ex:nose,jawline,eyes
+from sklearn.cluster import KMeans #for clustering
 
-imagepath = "D:\workspace\FaceShape\i2.jpg"
+#load the image
+imagepath = "D:\workspace\FaceShape\i7.jpg"
+#haarcascade for detecting faces
 # link = https://github.com/opencv/opencv/tree/master/data/haarcascades
 face_cascade_path = "D:\workspace\FaceShape\haarcascade_frontalface_default.xml"
-# download file path = http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+#.dat file for detecting facial landmarks
+#download file path = http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 predictor_path = "D:\workspace\FaceShape\shape_predictor_68_face_landmarks.dat"
 
 #create the haar cascade for detecting face and smile
@@ -19,9 +22,7 @@ predictor = dlib.shape_predictor(predictor_path)
 #read the image
 image = cv2.imread(imagepath)
 
-#for auto canny detection
-v = np.median(image)
-#resizing the image to 100 cols nd 50 rows
+#resizing the image to 000 cols nd 500 rows
 image = cv2.resize(image, (500, 500)) 
 #making another copy
 original = image.copy()
@@ -52,6 +53,7 @@ for (x,y,w,h) in faces:
     detected_landmarks = predictor(image, dlib_rect).parts()
     #converting to np matrix
     landmarks = np.matrix([[p.x,p.y] for p in detected_landmarks])
+    #landmarks array contains indices of landmarks.
     """
     #copying the image so we can we side by side
     landmark = image.copy()
@@ -70,11 +72,16 @@ results = original.copy()
 for (x,y,w,h) in faces:
     #draw a rectangle around the faces
     cv2.rectangle(results, (x,y), (x+w,y+h), (0,255,0), 2)
-    #getting area of interest from image i.e., forehead (25% of face)
+    #making temporary copy
     temp = original.copy()
+    #getting area of interest from image i.e., forehead (25% of face)
     forehead = temp[y:y+int(0.25*h), x:x+w]
     rows,cols, bands = forehead.shape
     X = forehead.reshape(rows*cols,bands)
+    """
+    Applying kmeans clustering algorithm for forehead with 2 clusters 
+    this clustering differentiates between hair and skin (thats why 2 clusters)
+    """
     #kmeans
     kmeans = KMeans(n_clusters=2,init='k-means++',max_iter=300,n_init=10, random_state=0)
     y_kmeans = kmeans.fit_predict(X)
@@ -84,26 +91,31 @@ for (x,y,w,h) in faces:
                 forehead[i][j]=[255,255,255]
             if y_kmeans[i*cols+j]==False:
                 forehead[i][j]=[0,0,0]
-    #getting the length of forehead
-    #1.take midpoint of the forehead
-    #2.travel left and right
-    #3.Consider the point which has change in pixel value
-    forehead_mid = [int(cols/2), int(rows/2) ]
-    lef=0
+    #Steps to get the length of forehead
+    #1.get midpoint of the forehead
+    #2.travel left side and right side
+    #the idea here is to detect the corners of forehead which is the hair.
+    #3.Consider the point which has change in pixel value (which is hair)
+    forehead_mid = [int(cols/2), int(rows/2) ] #midpoint of forehead
+    lef=0 
+    #gets the value of forehead point
     pixel_value = forehead[forehead_mid[1],forehead_mid[0] ]
     for i in range(0,cols):
+        #enters if when change in pixel color is detected
         if forehead[forehead_mid[1],forehead_mid[0]-i].all()!=pixel_value.all():
             lef=forehead_mid[0]-i
             break;
     left = [lef,forehead_mid[1]]
     rig=0
     for i in range(0,cols):
+        #enters if when change in pixel color is detected
         if forehead[forehead_mid[1],forehead_mid[0]+i].all()!=pixel_value.all():
             rig = forehead_mid[0]+i
             break;
     right = [rig,forehead_mid[1]]
     
 #drawing line1 on forehead with circles
+#specific landmarks are used. 
 line1 = np.subtract(right+y,left+x)[0]
 cv2.line(results, tuple(x+left), tuple(y+right), color=(0,255,0), thickness = 2)
 cv2.putText(results,' Line 1',tuple(x+left),fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=1,color=(0,255,0), thickness=2)
@@ -138,17 +150,16 @@ cv2.circle(results, linepointtop, 5, color=(255,0,0), thickness=-1)
 cv2.circle(results, linepointbottom, 5, color=(255,0,0), thickness=-1)    
 #print(line1,line2,line3,line4)
 
-maxindex = np.argmax([line1,line2, line3,line4])
 similarity = np.std([line1,line2,line3])
 #print("similarity=",similarity)
 ovalsimilarity = np.std([line2,line4])
 #print('diam=',ovalsimilarity)
+
 #we use arcustangens for angle calculation
 ax,ay = landmarks[3,0],landmarks[3,1]
 bx,by = landmarks[4,0],landmarks[4,1]
 cx,cy = landmarks[5,0],landmarks[5,1]
 dx,dy = landmarks[6,0],landmarks[6,1]
-
 import math
 from math import degrees
 alpha0 = math.atan2(cy-ay,cx-ax)
@@ -170,7 +181,7 @@ for i in range(1):
       print('triangle shape.Forehead is more wider') 
       break
   if ovalsimilarity<10:
-    print('diamond shape. line2~line4 and line2 is slightly larger')
+    print('diamond shape. line2 & line4 are similar and line2 is slightly larger')
     break
   if line4 > line2:
     if angle<160:
@@ -180,10 +191,6 @@ for i in range(1):
       print('oblong. face length is largest and jawlines are not angular')
       break;
   print("Damn! Contact the developer")
-   
-    
-  
-  
 
 output = np.concatenate((original,results), axis=1)
 cv2.imshow('output',output)
