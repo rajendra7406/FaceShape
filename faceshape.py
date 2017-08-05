@@ -4,7 +4,7 @@ import cv2
 import dlib
 from sklearn.cluster import KMeans
 
-imagepath = "D:\workspace\FaceShape\di2.jpg"
+imagepath = "D:\workspace\FaceShape\i2.jpg"
 # link = https://github.com/opencv/opencv/tree/master/data/haarcascades
 face_cascade_path = "D:\workspace\FaceShape\haarcascade_frontalface_default.xml"
 # download file path = http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
@@ -55,7 +55,7 @@ for (x,y,w,h) in faces:
     """
     #copying the image so we can we side by side
     landmark = image.copy()
-        for idx, point in enumerate(landmarks):
+    for idx, point in enumerate(landmarks):
             pos = (point[0,0], point[0,1] )
             #annotate the positions
             cv2.putText(landmark,str(idx),pos,fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.4,color=(0,0,255) )
@@ -136,32 +136,50 @@ cv2.line(results,linepointtop,linepointbottom,color=(0,255,0), thickness = 2)
 cv2.putText(results,' Line 4',linepointbottom,fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=1,color=(0,255,0), thickness=2)
 cv2.circle(results, linepointtop, 5, color=(255,0,0), thickness=-1)    
 cv2.circle(results, linepointbottom, 5, color=(255,0,0), thickness=-1)    
-print(line1,line2,line3,line4)
+#print(line1,line2,line3,line4)
 
 maxindex = np.argmax([line1,line2, line3,line4])
 similarity = np.std([line1,line2,line3])
-angle = 30
+#print("similarity=",similarity)
+ovalsimilarity = np.std([line2,line4])
+#print('diam=',ovalsimilarity)
+#we use arcustangens for angle calculation
+ax,ay = landmarks[3,0],landmarks[3,1]
+bx,by = landmarks[4,0],landmarks[4,1]
+cx,cy = landmarks[5,0],landmarks[5,1]
+dx,dy = landmarks[6,0],landmarks[6,1]
+
+import math
+from math import degrees
+alpha0 = math.atan2(cy-ay,cx-ax)
+alpha1 = math.atan2(dy-by,dx-bx)
+alpha = alpha1-alpha0
+angle = abs(degrees(alpha))
+angle = 180-angle
+
 for i in range(1):
   if similarity<10:
-    if angle>40:
-      print('squared')
+    if angle<160:
+      print('squared shape.Jawlines are more angular')
       break
     else:
-      print('round')
+      print('round shape.Jawlines are not that angular')
       break
   if line3>line1:
-    print('triangle shape') 
-    break
-  if maxindex+1 == 2:
-    print('diamond shape')
+    if angle<160:
+      print('triangle shape.Forehead is more wider') 
+      break
+  if ovalsimilarity<10:
+    print('diamond shape. line2~line4 and line2 is slightly larger')
     break
   if line4 > line2:
-    if angle > 40:
-      print('rectangular ')
+    if angle<160:
+      print('rectangular. face length is largest and jawline are angular ')
       break;
     else:
-      print('oblong')
+      print('oblong. face length is largest and jawlines are not angular')
       break;
+  print("Damn! Contact the developer")
    
     
   
