@@ -10,7 +10,7 @@ Face shape helps you to decide hairstyle scientifically.
 3. run the program
 
 
-![original and final image](https://github.com/rajendra7406/FaceShape/results.png)
+![original and final image](https://github.com/rajendra7406/FaceShape/blob/master/results.png)
 
 This face shape is square 
 
